@@ -3,6 +3,9 @@ const http = require('http');
 const path = require('path');
 const socketIO = require('socket.io');
 
+const {
+  generateMessage
+} = require('./utils/message');
 const publicPath = path.join(__dirname, '../public');
 const port = process.env.PORT || 1337;
 
@@ -16,26 +19,14 @@ io.on('connection', (socket) => {
   console.log('New user connected');
 
   //this goes to the client.
-  socket.emit('welcomeMessage', {
-    from: 'Admin Chad',
-    text: 'Welcome homie, how are you?',
-    createAt: new Date().getTime()
-  })
+  socket.emit('welcomeMessage', generateMessage('Admin', 'Welcome to da mofucken chat app.'))
 
   //this brodcast to everyone, but the client that started it.
-  socket.broadcast.emit('welcomeMessage', {
-    from: 'Admin Chad',
-    text: 'New user just join yall.',
-    createAt: new Date().getTime()
-  });
+  socket.broadcast.emit('welcomeMessage', generateMessage('Admin', 'New mofucken user joined.'));
 
   socket.on('createMessage', (message) => {
     console.log('createdMessage', message);
-    io.emit('newMessage', {
-      from: message.from,
-      text: message.text,
-      createAt: new Date().getTime()
-    })
+    io.emit('newMessage', generateMessage(message.from, message.text));
   });
 
   socket.on('disconnect', () => {
