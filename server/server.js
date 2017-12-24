@@ -15,6 +15,20 @@ app.use(express.static(publicPath));
 io.on('connection', (socket) => {
   console.log('New user connected');
 
+  //this goes to the client.
+  socket.emit('welcomeMessage', {
+    from: 'Admin Chad',
+    text: 'Welcome homie, how are you?',
+    createAt: new Date().getTime()
+  })
+
+  //this brodcast to everyone, but the client that started it.
+  socket.broadcast.emit('welcomeMessage', {
+    from: 'Admin Chad',
+    text: 'New user just join yall.',
+    createAt: new Date().getTime()
+  });
+
   socket.on('createMessage', (message) => {
     console.log('createdMessage', message);
     io.emit('newMessage', {
