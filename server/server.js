@@ -10,12 +10,20 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIO(server);
 
-
-
 app.use(express.static(publicPath));
 
 io.on('connection', (socket) => {
   console.log('New user connected');
+
+  socket.emit('newMessage', {
+    from: 'james fag',
+    text: 'Hey, I may be gay.',
+    createAt: 164
+  });
+
+  socket.on('createMessage', (newMessage) => {
+    console.log('createdMessage', newMessage);
+  });
 
   socket.on('disconnect', () => {
     console.log('User disconnected');
@@ -25,3 +33,8 @@ io.on('connection', (socket) => {
 server.listen(port, () => {
   console.log(`Server fucking started on port:${port}.`);
 });
+
+//newMessage by server listen on client from,text,createdAt
+
+
+//createMessage by client listen to server. from, text.
