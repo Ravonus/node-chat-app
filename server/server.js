@@ -19,14 +19,15 @@ io.on('connection', (socket) => {
   console.log('New user connected');
 
   //this goes to the client.
-  socket.emit('welcomeMessage', generateMessage('Admin', 'Welcome to da mofucken chat app.'))
+  socket.emit('newMessage', generateMessage('Admin', 'Welcome to da mofucken chat app.'))
 
   //this brodcast to everyone, but the client that started it.
-  socket.broadcast.emit('welcomeMessage', generateMessage('Admin', 'New mofucken user joined.'));
+  socket.broadcast.emit('newMessage', generateMessage('Admin', 'New mofucken user joined.'));
 
-  socket.on('createMessage', (message) => {
+  socket.on('createMessage', (message, callback) => {
     console.log('createdMessage', message);
     io.emit('newMessage', generateMessage(message.from, message.text));
+    callback('This is from the server!');
   });
 
   socket.on('disconnect', () => {
