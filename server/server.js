@@ -25,10 +25,14 @@ io.on('connection', (socket) => {
   socket.broadcast.emit('newMessage', generateMessage('Admin', 'New mofucken user joined.'));
 
   socket.on('createMessage', (message, callback) => {
-    console.log('createdMessage', message);
+    //  console.log('createdMessage', message);
     io.emit('newMessage', generateMessage(message.from, message.text));
     callback('This is from the server!');
   });
+
+  socket.on('createLocationMessage', (coords) => {
+    io.emit('newMessage', generateMessage('Admin', `${coords.latitude}, ${coords.longitude}`));
+  })
 
   socket.on('disconnect', () => {
     console.log('User disconnected');
