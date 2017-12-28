@@ -7,12 +7,19 @@ const {
   generateMessage,
   generateLocationMessage
 } = require('./utils/message');
+const {
+  isRealString
+} = require('./utils/validation');
+const {
+  Users
+} = require('./utils/users');
 const publicPath = path.join(__dirname, '../public');
 const port = process.env.PORT || 1337;
 
 var app = express();
 var server = http.createServer(app);
 var io = socketIO(server);
+var users = new Users();
 
 app.use(express.static(publicPath));
 
@@ -20,10 +27,31 @@ io.on('connection', (socket) => {
   console.log('New user connected');
 
   //this goes to the client.
-  socket.emit('newMessage', generateMessage('Admin', 'Welcome to da mofucken chat app.'))
 
-  //this brodcast to everyone, but the client that started it.
-  socket.broadcast.emit('newMessage', generateMessage('Admin', 'New mofucken user joined.'));
+  //this is how you join a channel so only people in same group can see brodcast,etc.
+
+  socket.on('join', (params, callback) => {
+    if (!isRealString(params.name) || !isRealString(params.room)) {
+      return callback('Name and room name are required.');
+    }
+
+    socket.join(params.room);
+    users.removeUser(socket.id);
+    users.addUser(socket.id, params.name, params.room);
+
+
+    //socket.leave('the Office Fans')
+
+    // io.emit (everyone)
+    // io.emit -> io.to('Room Name').emit (send everyone in specific room)
+    // socket.broadcast.emit (everyone but user running script)
+    // socket.broadcast.emit -> socket.broadcast.to('Room Name').emit (send everyone but user running script in said room name)
+    // socket.emit (script running using)
+    io.to(params.room).emit('updateUserList', users.getUserList(params.room));
+    socket.emit('newMessage', generateMessage('Admin', 'Welcome to da mofucken chat app.'))
+    socket.broadcast.to(params.room).emit('newMessage', generateMessage('Admin', `${params.name} has mo fucken join.`));
+    callback();
+  });
 
   socket.on('createMessage', (message, callback) => {
     //  console.log('createdMessage', message);
@@ -36,7 +64,11 @@ io.on('connection', (socket) => {
   })
 
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    var user = users.removeUser(socket.id);
+    if (user) {
+      io.to(user[0].room).emit('updateUserList', users.getUserList(user[0].room));
+      io.to(user[0].room).emit('newMessage', generateMessage('Admin', `${user[0].name} has fucking left.`));
+    }
   });
 });
 
