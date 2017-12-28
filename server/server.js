@@ -72,7 +72,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     var user = users.removeUser(socket.id);
-    if (user) {
+    if (user[0]) {
       io.to(user[0].room).emit('updateUserList', users.getUserList(user[0].room));
       io.to(user[0].room).emit('newMessage', generateMessage('Admin', `${user[0].name} has fucking left.`));
     }
