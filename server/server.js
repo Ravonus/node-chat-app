@@ -48,8 +48,8 @@ io.on('connection', (socket) => {
     // socket.broadcast.emit -> socket.broadcast.to('Room Name').emit (send everyone but user running script in said room name)
     // socket.emit (script running using)
     io.to(params.room).emit('updateUserList', users.getUserList(params.room));
-    socket.emit('newMessage', generateMessage('Admin', 'Welcome to da mofucken chat app.'))
-    socket.broadcast.to(params.room).emit('newMessage', generateMessage('Admin', `${params.name} has mo fucken join.`));
+    socket.emit('newMessage', generateMessage('Admin', 'Welcome to the chat app. By Chad Koslovsky'))
+    socket.broadcast.to(params.room).emit('newMessage', generateMessage('Admin', `${params.name} has joined.`));
     callback();
   });
 
@@ -74,13 +74,13 @@ io.on('connection', (socket) => {
     var user = users.removeUser(socket.id);
     if (user[0]) {
       io.to(user[0].room).emit('updateUserList', users.getUserList(user[0].room));
-      io.to(user[0].room).emit('newMessage', generateMessage('Admin', `${user[0].name} has fucking left.`));
+      io.to(user[0].room).emit('newMessage', generateMessage('Admin', `${user[0].name} has left.`));
     }
   });
 });
 
 server.listen(port, () => {
-  console.log(`Server fucking started on port:${port}.`);
+  console.log(`Server started on port:${port}.`);
 });
 
 //newMessage by server listen on client from,text,createdAt
