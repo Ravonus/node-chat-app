@@ -10,8 +10,6 @@ const {
 // should reject string with only spaces
 // should accept string in both.
 
-
-
 describe('Checking isRealString function', () => {
   it('should reject non-string values', () => {
     var res = isRealString(123);
