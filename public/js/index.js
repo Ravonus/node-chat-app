@@ -32,6 +32,7 @@ socket.on('connect', function () {
 
 let oneRun;
 socket.on('newRoom', function (obj) {
+  
   oneRun = false;
 
   if (obj.type === 'disconnect') {
@@ -78,6 +79,7 @@ function roomList(name, type, room) {
   }
   var divs = document.getElementsByClassName("myBox")[0].children;
   if (type === 'connect') document.getElementsByClassName("myBox")[0].append(roomList);
+  if(divs.length === 0) document.getElementsByClassName("myBox")[0].append(roomList);
   Object.keys(divs).forEach((divIndex, index) => {
     let div = divs[divIndex];
     if (div.innerText === name) found = true;

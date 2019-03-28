@@ -54,6 +54,7 @@ io.on('connection', (socket) => {
     socket.join(params.room);
     users.removeUser(socket.id);
     users.addUser(socket.id, params.name, params.room);
+    console.log('WOOT', Object.keys(grabRooms()))
     socket.broadcast.to('home').emit('newRoom', {rooms:Object.keys(grabRooms()), type:"join"});
 
     //socket.leave('the Office Fans')
