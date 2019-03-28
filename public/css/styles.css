@@ -186,4 +186,44 @@ button:disabled {
   }
 }
 
-Raw
+.myBox {
+  border: none;
+  padding: 5px;
+  font: 24px/36px sans-serif;
+  width: 200px;
+  height: 300px;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+  
+  /* Scrollbar styles */
+  ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+  }
+  
+  ::-webkit-scrollbar-track {
+  border: 1px solid yellowgreen;
+  border-radius: 10px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+  background: yellowgreen;  
+  border-radius: 10px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+  background: #88ba1c;  
+  }
+
+  .list:hover {
+    background-color: #2d5d8180;
+  }
+
+.list{
+  color: #2b6182;
+}
+
+a{
+  text-decoration: none;
+}

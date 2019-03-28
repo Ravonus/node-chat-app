@@ -21,24 +21,41 @@ var server = http.createServer(app);
 var io = socketIO(server);
 var users = new Users();
 
+function grabRooms() {
+  let rooms = io.sockets.adapter.rooms;
+  let socketList = Object.keys(io.sockets.clients().sockets);
+   socketList.forEach( socketID => delete rooms[socketID]);
+
+  return rooms;
+}
+
 app.use(express.static(publicPath));
 
 io.on('connection', (socket) => {
   console.log('New user connected');
+
+  socket.on('home', async (callback) => {
+    socket.join('home');
+
+    callback(null, Object.keys(grabRooms()))
+  });
+
 
   //this goes to the client.
 
   //this is how you join a channel so only people in same group can see brodcast,etc.
 
   socket.on('join', (params, callback) => {
+   
     if (!isRealString(params.name) || !isRealString(params.room)) {
       return callback('Name and room name are required.');
     }
-
+    socket.leave('home');
     socket.join(params.room);
     users.removeUser(socket.id);
     users.addUser(socket.id, params.name, params.room);
-
+    console.log('WOOT', Object.keys(grabRooms()))
+    socket.broadcast.to('home').emit('newRoom', {rooms:Object.keys(grabRooms()), type:"join"});
 
     //socket.leave('the Office Fans')
 
@@ -59,7 +76,6 @@ io.on('connection', (socket) => {
       io.to(user.room).emit('newMessage', generateMessage(user.name, message.text));
     }
 
-
     callback();
   });
 
@@ -71,8 +87,11 @@ io.on('connection', (socket) => {
   })
 
   socket.on('disconnect', () => {
+ 
     var user = users.removeUser(socket.id);
+    
     if (user[0]) {
+      if(!Object.keys(grabRooms()).includes(user[0].room)) socket.broadcast.to('home').emit('newRoom', {rooms:Object.keys(grabRooms()), type:"disconnect", room:user[0].room});
       io.to(user[0].room).emit('updateUserList', users.getUserList(user[0].room));
       io.to(user[0].room).emit('newMessage', generateMessage('Admin', `${user[0].name} has left.`));
     }
