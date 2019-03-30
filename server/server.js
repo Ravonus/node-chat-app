@@ -2,6 +2,11 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const socketIO = require('socket.io');
+const socketConfig = require('../config/socket.json');
+const _ = require('lodash');
+
+let sc = require('./socketClient');
+let servers = {};
 
 const {
   generateMessage,
@@ -21,10 +26,49 @@ var server = http.createServer(app);
 var io = socketIO(server);
 var users = new Users();
 
+
+
+async function asyncForEach(array, callback) {
+  for (let index = 0; index < array.length; index++) {
+    await callback(array[index], index, array);
+  }
+
+}
+
+
+function loopSocket(roomName, type, room) {
+
+
+
+  socketConfig.hosts.forEach(server => {
+    let socket = servers[server.token];
+    socket.grabUsers(room, socketConfig.token);
+
+    socket.rooms = Object.keys(grabRooms());
+    if (!room || room !== undefined) {
+      socket.pushRooms(roomName, type, room);
+    } else {
+      socket.pushRooms(roomName, type);
+    }
+  });
+
+}
+
+if (socketConfig.hosts.length > 1) {
+
+} else {
+  socketConfig.hosts.forEach(server => {
+    servers[server.token] = new sc(server.url, server.token, Object.keys(grabRooms()), {io,users});
+    servers[server.token].init();
+  });
+
+}
+
+
 function grabRooms() {
   let rooms = io.sockets.adapter.rooms;
   let socketList = Object.keys(io.sockets.clients().sockets);
-   socketList.forEach( socketID => delete rooms[socketID]);
+  socketList.forEach(socketID => delete rooms[socketID]);
 
   return rooms;
 }
@@ -33,29 +77,51 @@ app.use(express.static(publicPath));
 
 io.on('connection', (socket) => {
   console.log('New user connected');
+  let handshakeData = socket.request;
+  let token = handshakeData._query['token'];
+
 
   socket.on('home', async (callback) => {
     socket.join('home');
-
     callback(null, Object.keys(grabRooms()))
+
   });
 
+  loopSocket('newRoom', 'join')
 
+
+  if (servers[token]) {
+
+    let server = servers[token];
+    servers[token].rooms = Object.keys(grabRooms());
+    servers[token].pushRooms('newRoom', 'join');
+    socket.emit('pushRooms', servers[token].rooms);
+    // console.log(servers[token])
+  }
   //this goes to the client.
 
   //this is how you join a channel so only people in same group can see brodcast,etc.
 
-  socket.on('join', (params, callback) => {
-   
+  socket.on('join', async (params, callback) => {
+
     if (!isRealString(params.name) || !isRealString(params.room)) {
       return callback('Name and room name are required.');
     }
     socket.leave('home');
     socket.join(params.room);
     users.removeUser(socket.id);
+
+
+
     users.addUser(socket.id, params.name, params.room);
-    console.log('WOOT', Object.keys(grabRooms()))
-    socket.broadcast.to('home').emit('newRoom', {rooms:Object.keys(grabRooms()), type:"join"});
+    loopSocket('newRoomPush', 'join');
+
+    socket.broadcast.to('home').emit('newRoom', {
+      rooms: Object.keys(grabRooms()),
+      type: 'join'
+    });
+
+
 
     //socket.leave('the Office Fans')
 
@@ -64,9 +130,20 @@ io.on('connection', (socket) => {
     // socket.broadcast.emit (everyone but user running script)
     // socket.broadcast.emit -> socket.broadcast.to('Room Name').emit (send everyone but user running script in said room name)
     // socket.emit (script running using)
+
+    
+
+    asyncForEach( Object.keys(servers), async (key) => {
+  
+        let socket = servers[key];
+        socket.grabUsers(params.room, socketConfig.token);
+    });
+    
     io.to(params.room).emit('updateUserList', users.getUserList(params.room));
     socket.emit('newMessage', generateMessage('Admin', 'Welcome to the chat app. By Chad Koslovsky'))
+    
     socket.broadcast.to(params.room).emit('newMessage', generateMessage('Admin', `${params.name} has joined.`));
+
     callback();
   });
 
@@ -87,15 +164,53 @@ io.on('connection', (socket) => {
   })
 
   socket.on('disconnect', () => {
- 
+
     var user = users.removeUser(socket.id);
-    
+
     if (user[0]) {
-      if(!Object.keys(grabRooms()).includes(user[0].room)) socket.broadcast.to('home').emit('newRoom', {rooms:Object.keys(grabRooms()), type:"disconnect", room:user[0].room});
+      if (!Object.keys(grabRooms()).includes(user[0].room)) socket.broadcast.to('home').emit('newRoom', {
+        rooms: Object.keys(grabRooms()),
+        type: "disconnect",
+        room: user[0].room
+      });
       io.to(user[0].room).emit('updateUserList', users.getUserList(user[0].room));
       io.to(user[0].room).emit('newMessage', generateMessage('Admin', `${user[0].name} has left.`));
+
+      loopSocket('newRoom', 'disconnect', user[0].room);
+
     }
   });
+
+  socket.on('grabUsers', (room) => {
+    socket.emit('userList', users.getUserList(room), room)
+  });
+
+  socket.on('userList', (list, room) => {
+    io.to(room).emit('updateUserList', _.merge(users.getUserList(room)), list);
+  });
+
+  socket.on('newRoom', (data) => {
+    if(data.room && data.type === 'disconnect') {
+      if (!Object.keys(grabRooms()).includes(data.room )) socket.broadcast.to('home').emit('newRoom', {
+        rooms: Object.keys(grabRooms()),
+        type: "disconnect",
+        room: data.room
+      });
+    }
+    loopSocket('newRoomPush', data.type, data.room);
+
+
+  });
+
+  socket.on('newRoomPush', (data) => {
+    console.log(data);
+    socket.broadcast.to('home').emit('newRoom', {
+      rooms: _.merge(Object.keys(grabRooms()), data.rooms),
+      type: data.type
+    });
+
+  });
+
 });
 
 server.listen(port, () => {
